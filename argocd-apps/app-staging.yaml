@@ -1,7 +1,7 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: cicd-observability-demo-dev
+  name: app-staging
   namespace: argocd
 spec:
   project: default

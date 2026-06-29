@@ -2,29 +2,27 @@ apiVersion: argoproj.io/v1alpha1
 kind: Rollout
 metadata:
   labels:
-    app: backend
-    component: api
-  name: backend
+    app: frontend
+  name: frontend
 spec:
   replicas: 4
   selector:
     matchLabels:
-      app: backend
+      app: frontend
   strategy:
     blueGreen:
       autoPromotionEnabled: true
       autoPromotionSeconds: 30
-      activeService: backend-stable
-      previewService: backend-canary
+      activeService: frontend-stable
+      previewService: frontend-canary
   template:
     metadata:
       labels:
-        app: backend
-        component: api
+        app: frontend
     spec:
       containers:
-        - image: mquang279/demo-backend:latest
-          name: app-backend
+        - image: mquang279/demo-frontend:latest
+          name: app-frontend
           imagePullPolicy: Always
           resources:
             requests:

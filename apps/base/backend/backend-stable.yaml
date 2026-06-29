@@ -3,7 +3,7 @@ kind: Service
 metadata:
   labels:
     app: backend
-  name: service-canary
+  name: backend-stable
 spec:
   selector:
     app: backend

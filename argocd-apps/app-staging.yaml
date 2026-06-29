@@ -9,7 +9,7 @@ spec:
   source:
     repoURL: https://github.com/mquang279/demo-app-gitops.git
     targetRevision: main
-    path: apps/cicd-observability-demo/overlays/dev
+    path: apps/overlays/staging
 
   destination:
     server: https://kubernetes.default.svc

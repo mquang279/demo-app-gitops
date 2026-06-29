@@ -9,7 +9,7 @@ spec:
   project: default
 
   source:
-    repoURL: https://github.com/mquang279/cicd-observability-gitops.git
+    repoURL: https://github.com/mquang279/demo-app-gitops.git
     targetRevision: main
     path: ci
 

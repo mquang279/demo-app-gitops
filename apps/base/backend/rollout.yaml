@@ -23,7 +23,7 @@ spec:
         component: api
     spec:
       containers:
-        - image: mquang279/vote
+        - image: mquang279/vote:0a932c0
           name: vote
           imagePullPolicy: Always
           resources:

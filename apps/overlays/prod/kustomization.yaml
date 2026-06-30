@@ -6,5 +6,4 @@ resources:
   - ../../base
 
 patches:
-  - path: patches/backend-rollout-patch.yaml
   - path: patches/frontend-rollout-patch.yaml

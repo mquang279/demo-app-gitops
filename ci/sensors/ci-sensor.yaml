@@ -26,11 +26,32 @@ spec:
                   name: ci-template
                 arguments:
                   parameters:
-                  - name: repo-url
-                    value: "https://github.com/mquang279/demo-app.git"
+                  - name: before-revision
+                    value: ""
+                  - name: revision
+                    value: ""
                   - name: branch
                     value: "main"
+                  - name: repo-url
+                    value: "https://github.com/mquang279/demo-app.git"
                   - name: backend-image
                     value: "mquang279/demo-backend"
                   - name: frontend-image
                     value: "mquang279/demo-frontend"
+          parameters:
+            - src:
+                dependencyName: poll-github
+                dataKey: body.before
+              dest: spec.arguments.parameters.0.value
+            - src:
+                dependencyName: poll-github
+                dataKey: body.after
+              dest: spec.arguments.parameters.1.value
+            - src:
+                dependencyName: poll-github
+                dataTemplate: '{{ trimPrefix "refs/heads/" .Input.body.ref }}'
+              dest: spec.arguments.parameters.2.value
+            - src:
+                dependencyName: poll-github
+                dataKey: body.repository.clone_url
+              dest: spec.arguments.parameters.3.value

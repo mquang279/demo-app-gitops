@@ -9,10 +9,14 @@ spec:
   entrypoint: main
   arguments:
     parameters:
-      - name: repo-url
-        value: "https://github.com/mquang279/demo-app.git"
+      - name: before-revision
+        value: ""
+      - name: revision
+        value: ""
       - name: branch
         value: "main"
+      - name: repo-url
+        value: "https://github.com/mquang279/demo-app.git"
       - name: backend-image
         value: "mquang279/demo-backend"
       - name: frontend-image
@@ -40,6 +44,8 @@ spec:
     - name: main
       inputs:
         parameters:
+          - name: before-revision
+          - name: revision
           - name: repo-url
           - name: branch
           - name: backend-image
@@ -54,60 +60,176 @@ spec:
                   value: "{{workflow.parameters.repo-url}}"
                 - name: branch
                   value: "{{workflow.parameters.branch}}"
-          - name: build-frontend
+                - name: revision
+                  value: "{{workflow.parameters.revision}}"
+
+          # Detect changes once so an independent service is not rebuilt or redeployed.
+          - name: detect-changes
             dependencies:
               - clone-source
-            template: build-frontend
-          - name: test-backend
+            template: detect-changes
+            arguments:
+              parameters:
+                - name: before-revision
+                  value: "{{workflow.parameters.before-revision}}"
+                - name: revision
+                  value: "{{workflow.parameters.revision}}"
+
+          - name: backend-test
             dependencies:
-              - clone-source
+              - detect-changes
             template: test-backend
-          - name: build-backend-image
+            when: "{{tasks.detect-changes.outputs.parameters.build-backend}} == true"
+
+          - name: backend-image-build-push
             dependencies:
-              - test-backend
-              - build-frontend
+              - backend-test
             template: build-backend-image
+            when: "{{tasks.detect-changes.outputs.parameters.build-backend}} == true"
             arguments:
               parameters:
                 - name: backend-image
                   value: "{{workflow.parameters.backend-image}}"
-                - name: commit-sha
-                  value: "{{tasks.clone-source.outputs.parameters.commit-sha}}"
+                - name: image-tag
+                  value: "{{tasks.clone-source.outputs.parameters.image-tag}}"
 
-          - name: build-frontend-image
+          - name: frontend-build
             dependencies:
-              - build-frontend
-              - test-backend
+              - detect-changes
+            template: build-frontend
+            when: "{{tasks.detect-changes.outputs.parameters.build-frontend}} == true"
+
+          - name: frontend-image-build-push
+            dependencies:
+              - frontend-build
             template: build-frontend-image
+            when: "{{tasks.detect-changes.outputs.parameters.build-frontend}} == true"
             arguments:
               parameters:
                 - name: frontend-image
                   value: "{{workflow.parameters.frontend-image}}"
-                - name: commit-sha
-                  value: "{{tasks.clone-source.outputs.parameters.commit-sha}}"
+                - name: image-tag
+                  value: "{{tasks.clone-source.outputs.parameters.image-tag}}"
 
     - name: clone-source
       inputs:
         parameters:
           - name: repo-url
           - name: branch
+          - name: revision
       script:
         image: alpine/git
         command: [sh]
+        env:
+          - name: REPO_URL
+            value: "{{inputs.parameters.repo-url}}"
+          - name: BRANCH
+            value: "{{inputs.parameters.branch}}"
+          - name: REVISION
+            value: "{{inputs.parameters.revision}}"
         source: |
           #!/bin/sh
-          git clone --branch {{inputs.parameters.branch}} {{inputs.parameters.repo-url}} /workspace
+          set -eu
+
+          # A full clone keeps history available for detect-changes.
+          git clone "$REPO_URL" /workspace
           cd /workspace
+          git fetch origin "$REVISION"
+          git checkout --detach "$REVISION"
+
           COMMIT_SHA=$(git rev-parse --short HEAD)
-          echo $COMMIT_SHA > /workspace/commit-sha.txt
+          SAFE_BRANCH=$(printf '%s' "$BRANCH" \
+            | tr '[:upper:]/' '[:lower:]-' \
+            | sed 's/[^a-z0-9_.-]/-/g; s/^[.-]*//; s/[.-]*$//')
+          [ -n "$SAFE_BRANCH" ] || SAFE_BRANCH=revision
+          printf '%s-%s' "$SAFE_BRANCH" "$COMMIT_SHA" > /workspace/image-tag.txt
         volumeMounts:
           - name: workspace
             mountPath: /workspace
       outputs:
         parameters:
-          - name: commit-sha
+          - name: image-tag
             valueFrom:
-              path: /workspace/commit-sha.txt
+              path: /workspace/image-tag.txt
+
+    - name: detect-changes
+      inputs:
+        parameters:
+          - name: before-revision
+          - name: revision
+      script:
+        image: alpine/git
+        command: [sh]
+        env:
+          - name: BEFORE_REVISION
+            value: "{{inputs.parameters.before-revision}}"
+          - name: REVISION
+            value: "{{inputs.parameters.revision}}"
+        source: |
+          #!/bin/sh
+          set -eu
+
+          write_result() {
+            printf '%s' "$1" > /tmp/build-backend.txt
+            printf '%s' "$2" > /tmp/build-frontend.txt
+          }
+
+          # Initial/unknown pushes have no reliable base, so build both safely.
+          if [ -z "$BEFORE_REVISION" ] || printf '%s' "$BEFORE_REVISION" | grep -Eq '^0+$'; then
+            write_result true true
+            exit 0
+          fi
+
+          cd /workspace
+          if ! git cat-file -e "${BEFORE_REVISION}^{commit}" 2>/dev/null; then
+            git fetch origin "$BEFORE_REVISION" || {
+              write_result true true
+              exit 0
+            }
+          fi
+          if ! git cat-file -e "${REVISION}^{commit}" 2>/dev/null; then
+            git fetch origin "$REVISION" || {
+              write_result true true
+              exit 0
+            }
+          fi
+
+          CHANGED_FILES=$(git diff --name-only "$BEFORE_REVISION" "$REVISION") || {
+            write_result true true
+            exit 0
+          }
+
+          BUILD_BACKEND=false
+          BUILD_FRONTEND=false
+          while IFS= read -r file; do
+            case "$file" in
+              backend/*)
+                BUILD_BACKEND=true
+                ;;
+              frontend/*)
+                BUILD_FRONTEND=true
+                ;;
+              docker-compose.yml|README.md|.gitignore|shared/*|common/*|ci/*|.github/*)
+                BUILD_BACKEND=true
+                BUILD_FRONTEND=true
+                ;;
+            esac
+          done <<EOF
+          $CHANGED_FILES
+          EOF
+
+          write_result "$BUILD_BACKEND" "$BUILD_FRONTEND"
+        volumeMounts:
+          - name: workspace
+            mountPath: /workspace
+      outputs:
+        parameters:
+          - name: build-backend
+            valueFrom:
+              path: /tmp/build-backend.txt
+          - name: build-frontend
+            valueFrom:
+              path: /tmp/build-frontend.txt
 
     - name: build-frontend
       script:
@@ -139,17 +261,16 @@ spec:
     - name: build-frontend-image
       inputs:
         parameters:
-          - name: commit-sha
+          - name: image-tag
           - name: frontend-image
       container:
-        image: gcr.io/kaniko-project/executor:latest
+        # CI only builds/pushes; Argo Image Updater and Argo CD own deployment.
+        image: gcr.io/kaniko-project/executor:v1.24.0
         command: ["/kaniko/executor"]
         args:
           - "--dockerfile=/workspace/frontend/Dockerfile"
           - "--context=/workspace/frontend"
-          - "--destination={{inputs.parameters.frontend-image}}:{{inputs.parameters.commit-sha}}"
-          - "--force"
-          - "--cleanup=false"
+          - "--destination={{inputs.parameters.frontend-image}}:{{inputs.parameters.image-tag}}"
         volumeMounts:
           - name: workspace
             mountPath: /workspace
@@ -159,14 +280,14 @@ spec:
     - name: build-backend-image
       inputs:
         parameters:
-          - name: commit-sha
+          - name: image-tag
           - name: backend-image
       container:
         image: gcr.io/kaniko-project/executor:v1.24.0
         args:
           - "--dockerfile=/workspace/backend/Dockerfile"
           - "--context=/workspace/backend"
-          - "--destination={{inputs.parameters.backend-image}}:{{inputs.parameters.commit-sha}}"
+          - "--destination={{inputs.parameters.backend-image}}:{{inputs.parameters.image-tag}}"
         volumeMounts:
           - name: workspace
             mountPath: /workspace

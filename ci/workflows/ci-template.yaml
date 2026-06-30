@@ -1,0 +1,172 @@
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  name: ci-template
+  namespace: argo-events
+spec:
+  serviceAccountName: ci-workflow-sa
+  entrypoint: main
+  arguments:
+    parameters:
+      - name: repo-url
+        value: "https://github.com/mquang279/demo-app.git"
+      - name: branch
+        value: "main"
+      - name: backend-image
+        value: "mquang279/demo-backend"
+      - name: frontend-image
+        value: "mquang279/demo-frontend"
+
+  volumeClaimTemplates:
+    - metadata:
+        name: workspace
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 1Gi
+
+  volumes:
+    - name: docker-config
+      secret:
+        secretName: docker-registry-creds
+        items:
+          - key: .dockerconfigjson
+            path: config.json
+
+  templates:
+    - name: main
+      inputs:
+        parameters:
+          - name: repo-url
+          - name: branch
+          - name: backend-image
+          - name: frontend-image
+      dag:
+        tasks:
+          - name: clone-source
+            template: clone-source
+            arguments:
+              parameters:
+                - name: repo-url
+                  value: "{{workflow.parameters.repo-url}}"
+                - name: branch
+                  value: "{{workflow.parameters.branch}}"
+          - name: build-frontend
+            dependencies:
+              - clone-source
+            template: build-frontend
+          - name: test-backend
+            dependencies:
+              - clone-source
+            template: test-backend
+          - name: build-backend-image
+            dependencies:
+              - test-backend
+            template: build-backend-image
+            arguments:
+              parameters:
+                - name: backend-image
+                  value: "{{workflow.parameters.backend-image}}"
+                - name: commit-sha
+                  value: "{{tasks.clone-source.outputs.parameters.commit-sha}}"
+
+          - name: build-frontend-image
+            dependencies:
+              - build-frontend
+            template: build-frontend-image
+            arguments:
+              parameters:
+                - name: frontend-image
+                  value: "{{workflow.parameters.frontend-image}}"
+                - name: commit-sha
+                  value: "{{tasks.clone-source.outputs.parameters.commit-sha}}"
+
+    - name: clone-source
+      inputs:
+        parameters:
+          - name: repo-url
+          - name: branch
+        script:
+          image: alpine/git
+          command: [sh]
+          source: |
+            #!/bin/sh
+            git clone --branch {{inputs.parameters.branch}} {{inputs.parameters.repo-url}} /workspace
+            cd /workspace
+            COMMIT_SHA=$(git rev-parse --short HEAD)
+            echo $COMMIT_SHA > /workspace/commit-sha.txt
+          volumeMounts:
+            - name: workspace
+              mountPath: /workspace
+      outputs:
+        parameters:
+          - name: commit-sha
+            valueFrom:
+              path: /workspace/commit-sha.txt
+
+    - name: build-frontend
+      script:
+        image: node:26-alpine3.23
+        command: [sh]
+        source: |
+          #!/bin/sh
+          cd /workspace/frontend
+          npm ci
+          npm run build
+        volumeMounts:
+          - name:  workspace
+            mountPath: /workspace
+
+    - name: test-backend
+      script:
+        image: python:3.9
+        command: [sh]
+        source: |
+          #!/bin/sh
+          cd /workspace/backend
+          pip install -r requirements.txt
+          pip install pytest httpx
+          pytest -v
+        volumeMounts:
+          - name:  workspace
+            mountPath: /workspace
+
+    - name: build-frontend-image
+      inputs:
+        parameters:
+          - name: commit-sha
+          - name: frontend-image
+      container:
+        image: gcr.io/kaniko-project/executor:latest
+        command: ["/kaniko/executor"]
+        args:
+          - "--dockerfile=/workspace/frontend/Dockerfile"
+          - "--context=/workspace/frontend"
+          - "--destination={{inputs.parameters.frontend-image}}:{{inputs.parameters.commit-sha}}"
+          - "--force"
+        volumeMounts:
+          - name: workspace
+            mountPath: /workspace
+          - name: docker-config
+            mountPath: /kaniko/.docker
+
+    - name: build-backend-image
+      inputs:
+        parameters:
+          - name: commit-sha
+          - name: backend-image
+      container:
+        image: gcr.io/kaniko-project/executor:latest
+        args:
+          - "--dockerfile=/workspace/backend/Dockerfile"
+          - "--context=/workspace/backend"
+          - "--destination={{inputs.parameters.backend-image}}:{{inputs.parameters.commit-sha}}"
+          - "--force"
+        volumeMounts:
+          - name: workspace
+            mountPath: /workspace
+          - name: docker-config
+            mountPath: /kaniko/.docker

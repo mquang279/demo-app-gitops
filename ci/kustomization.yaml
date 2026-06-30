@@ -1,0 +1,9 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - event-sources/github-webhook.yaml
+  - sensors/rbac.yaml
+  - sensors/ci-sensor.yaml
+  - workflows/rbac.yaml
+  - workflows/ci-template.yaml

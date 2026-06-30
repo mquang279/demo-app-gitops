@@ -1,0 +1,36 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Sensor
+metadata:
+  name: ci-sensor
+  namespace: argo-events
+spec:
+  template:
+    serviceAccountName: ci-sensor-sa
+  dependencies:
+    - name: poll-github
+      eventSourceName: github-webhook
+      eventName: push
+  triggers:
+    - template:
+        name: launch-ci-pipeline
+        argoWorkflow:
+          operation: submit
+          source:
+            resource:
+              apiVersion: argoproj.io/v1alpha1
+              kind: Workflow
+              metadata:
+                generateName: ci-pipeline-
+              spec:
+                workflowTemplateRef:
+                  name: ci-template
+                arguments:
+                  parameters:
+                  - name: repo-url
+                    value: "https://github.com/mquang279/vote.git"
+                  - name: branch
+                    value: "main"
+                  - name: image
+                    value: "mquang279/vote"
+                  - name: dockerfile
+                    value: "Dockerfile"

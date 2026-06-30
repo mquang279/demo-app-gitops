@@ -1,4 +1,4 @@
 kustomize:
   images:
-  - mquang279/demo-backend=mquang279/demo-backend:b5ac9d1
+  - mquang279/demo-backend=mquang279/demo-backend:117888b
   - mquang279/demo-frontend=mquang279/demo-frontend:87d9fff

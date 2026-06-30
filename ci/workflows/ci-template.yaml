@@ -162,13 +162,11 @@ spec:
           - name: commit-sha
           - name: backend-image
       container:
-        image: gcr.io/kaniko-project/executor:latest
+        image: gcr.io/kaniko-project/executor:v1.24.0
         args:
           - "--dockerfile=/workspace/backend/Dockerfile"
           - "--context=/workspace/backend"
           - "--destination={{inputs.parameters.backend-image}}:{{inputs.parameters.commit-sha}}"
-          - "--force"
-          - "--cleanup=false"
         volumeMounts:
           - name: workspace
             mountPath: /workspace

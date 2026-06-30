@@ -150,7 +150,6 @@ spec:
           - "--destination={{inputs.parameters.frontend-image}}:{{inputs.parameters.commit-sha}}"
           - "--force"
           - "--cleanup=false"
-          - "--cache=true"
         volumeMounts:
           - name: workspace
             mountPath: /workspace
@@ -170,7 +169,6 @@ spec:
           - "--destination={{inputs.parameters.backend-image}}:{{inputs.parameters.commit-sha}}"
           - "--force"
           - "--cleanup=false"
-          - "--cache=true"
         volumeMounts:
           - name: workspace
             mountPath: /workspace

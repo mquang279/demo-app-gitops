@@ -8,7 +8,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: ci-sensor-workflow-trigger-role
-  namespace: argo
+  namespace: argo-events
 rules:
   - apiGroups:
       - argoproj.io
@@ -24,7 +24,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: ci-sensor-workflow-trigger-rolebinding
-  namespace: argo
+  namespace: argo-events
 subjects:
   - kind: ServiceAccount
     name: ci-sensor-sa

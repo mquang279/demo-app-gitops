@@ -152,7 +152,7 @@ spec:
             | tr '[:upper:]/' '[:lower:]-' \
             | sed 's/[^a-z0-9_.-]/-/g; s/^[.-]*//; s/[.-]*$//')
           [ -n "$SAFE_BRANCH" ] || SAFE_BRANCH=revision
-          printf '%s-%s' "$SAFE_BRANCH" "$COMMIT_SHA" > /workspace/image-tag.txt
+          printf '%s' "$COMMIT_SHA" > /workspace/image-tag.txt
           printf '%s' "$RESOLVED_REVISION" > /workspace/revision.txt
         volumeMounts:
           - name: workspace

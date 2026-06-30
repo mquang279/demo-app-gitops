@@ -5,3 +5,6 @@ namespace: argo
 resources:
   - namespace.yaml
   - https://github.com/argoproj/argo-workflows/releases/download/v4.0.6/install.yaml
+
+patches:
+  - path: argo-server-auth-mode.yaml

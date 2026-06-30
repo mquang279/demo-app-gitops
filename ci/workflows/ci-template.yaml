@@ -65,6 +65,7 @@ spec:
           - name: build-backend-image
             dependencies:
               - test-backend
+              - build-frontend
             template: build-backend-image
             arguments:
               parameters:
@@ -76,6 +77,7 @@ spec:
           - name: build-frontend-image
             dependencies:
               - build-frontend
+              - test-backend
             template: build-frontend-image
             arguments:
               parameters:
@@ -147,6 +149,8 @@ spec:
           - "--context=/workspace/frontend"
           - "--destination={{inputs.parameters.frontend-image}}:{{inputs.parameters.commit-sha}}"
           - "--force"
+          - "--cleanup=false"
+          - "--cache=true"
         volumeMounts:
           - name: workspace
             mountPath: /workspace
@@ -165,6 +169,8 @@ spec:
           - "--context=/workspace/backend"
           - "--destination={{inputs.parameters.backend-image}}:{{inputs.parameters.commit-sha}}"
           - "--force"
+          - "--cleanup=false"
+          - "--cache=true"
         volumeMounts:
           - name: workspace
             mountPath: /workspace

@@ -73,7 +73,7 @@ spec:
                 - name: before-revision
                   value: "{{workflow.parameters.before-revision}}"
                 - name: revision
-                  value: "{{workflow.parameters.revision}}"
+                  value: "{{tasks.clone-source.outputs.parameters.revision}}"
 
           - name: backend-test
             dependencies:
@@ -134,15 +134,26 @@ spec:
           # A full clone keeps history available for detect-changes.
           git clone "$REPO_URL" /workspace
           cd /workspace
-          git fetch origin "$REVISION"
-          git checkout --detach "$REVISION"
 
+          if [ -n "$REVISION" ]; then
+            git fetch origin "$REVISION"
+          elif [ -n "$BRANCH" ]; then
+            echo "revision is empty; resolving branch '$BRANCH'"
+            git fetch origin "$BRANCH"
+          else
+            echo "revision and branch are both empty" >&2
+            exit 1
+          fi
+          git checkout --detach FETCH_HEAD
+
+          RESOLVED_REVISION=$(git rev-parse HEAD)
           COMMIT_SHA=$(git rev-parse --short HEAD)
           SAFE_BRANCH=$(printf '%s' "$BRANCH" \
             | tr '[:upper:]/' '[:lower:]-' \
             | sed 's/[^a-z0-9_.-]/-/g; s/^[.-]*//; s/[.-]*$//')
           [ -n "$SAFE_BRANCH" ] || SAFE_BRANCH=revision
           printf '%s-%s' "$SAFE_BRANCH" "$COMMIT_SHA" > /workspace/image-tag.txt
+          printf '%s' "$RESOLVED_REVISION" > /workspace/revision.txt
         volumeMounts:
           - name: workspace
             mountPath: /workspace
@@ -151,6 +162,9 @@ spec:
           - name: image-tag
             valueFrom:
               path: /workspace/image-tag.txt
+          - name: revision
+            valueFrom:
+              path: /workspace/revision.txt
 
     - name: detect-changes
       inputs:

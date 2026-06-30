@@ -27,10 +27,10 @@ spec:
                 arguments:
                   parameters:
                   - name: repo-url
-                    value: "https://github.com/mquang279/vote.git"
+                    value: "https://github.com/mquang279/demo-app.git"
                   - name: branch
                     value: "main"
-                  - name: image
-                    value: "mquang279/vote"
-                  - name: dockerfile
-                    value: "Dockerfile"
+                  - name: backend-image
+                    value: "mquang279/demo-backend"
+                  - name: frontend-image
+                    value: "mquang279/demo-frontend"

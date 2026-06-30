@@ -114,7 +114,7 @@ spec:
         source: |
           #!/bin/sh
           cd /workspace/frontend
-          npm ci
+          npm install
           npm run build
         volumeMounts:
           - name:  workspace

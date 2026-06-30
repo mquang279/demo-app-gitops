@@ -117,12 +117,12 @@ spec:
           npm install
           npm run build
         volumeMounts:
-          - name:  workspace
+          - name: workspace
             mountPath: /workspace
 
     - name: test-backend
       script:
-        image: python:3.9
+        image: python:3.11
         command: [sh]
         source: |
           #!/bin/sh
@@ -131,7 +131,7 @@ spec:
           pip install pytest httpx
           pytest -v
         volumeMounts:
-          - name:  workspace
+          - name: workspace
             mountPath: /workspace
 
     - name: build-frontend-image

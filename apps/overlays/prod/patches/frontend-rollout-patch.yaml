@@ -12,7 +12,14 @@ spec:
   strategy:
     blueGreen: null
     canary:
+      canaryService: frontend-canary
+      stableService: frontend-stable
+      trafficRouting:
+        nginx:
+          stableIngress: frontend-ingress
       steps:
+        - setCanaryScale:
+            replicas: 3
         - setWeight: 20
         - pause:
             duration: 10s

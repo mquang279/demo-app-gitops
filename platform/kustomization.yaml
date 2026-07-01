@@ -4,4 +4,6 @@ kind: Kustomization
 resources:
   - argo-events
   - argocd
+  - argocd-image-updater
   - argo-rollouts
+  - argo-workflows

@@ -5,3 +5,4 @@ resources:
   - rollout.yaml
   - backend-stable.yaml
   - backend-canary.yaml
+  - servicemonitor.yaml

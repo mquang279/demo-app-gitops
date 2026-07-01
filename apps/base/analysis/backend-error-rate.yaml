@@ -14,7 +14,7 @@ spec:
           address: http://monitoring-kube-prometheus-prometheus.monitoring.svc:9090
           query: |
             (
-              sum(rate(http_requests_total{status_code=~"5.."}[1m]))
+              (sum(rate(http_requests_total{service="backend-canary",status_code=~"5.."}[1m])) or vector(0))
               /
-              sum(rate(http_requests_total[1m]))
-            ) or vector(0)
+              sum(rate(http_requests_total{service="backend-canary"}[1m]))
+            )

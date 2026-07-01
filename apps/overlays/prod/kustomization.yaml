@@ -5,9 +5,9 @@ namespace: prod
 resources:
   - namespace.yaml
   - ingress.yaml
+  - backend-ingress.yaml
   - ../../base
 
 patches:
   - path: patches/backend-rollout-patch.yaml
   - path: patches/frontend-rollout-patch.yaml
-

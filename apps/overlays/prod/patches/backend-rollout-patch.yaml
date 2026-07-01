@@ -12,6 +12,9 @@ spec:
     canary:
       stableService: backend-stable
       canaryService: backend-canary
+      trafficRouting:
+        nginx:
+          stableIngress: backend-ingress
       steps:
         - setWeight: 20
         - pause:

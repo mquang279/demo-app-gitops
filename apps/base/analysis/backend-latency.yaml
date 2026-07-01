@@ -15,5 +15,5 @@ spec:
           query: |
             histogram_quantile(
               0.95,
-              sum(rate(http_request_duration_seconds_bucket[1m])) by (le)
-            ) or vector(0)
+              sum(rate(http_request_duration_seconds_bucket{service="backend-canary"}[1m])) by (le)
+            )

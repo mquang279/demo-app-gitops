@@ -6,24 +6,26 @@ metadata:
     component: api
   name: backend
 spec:
-  replicas: 5
+  replicas: 4
   selector:
     matchLabels:
       app: backend
+      component: api
   strategy:
-    blueGreen: null
     canary:
+      stableService: backend-stable
+      canaryService: backend-canary
       steps:
-      - setWeight: 20
-      - pause:
-          duration: 10s
-      - setWeight: 40
-      - pause:
-          duration: 10s
-      - setWeight: 60
-      - pause:
-          duration: 10s
-      - setWeight: 80
-      - pause:
-          duration: 10s
-      - setWeight: 100
+        - setWeight: 20
+        - pause:
+            duration: 20s
+        - analysis:
+            templates:
+              - templateName: backend-error-rate
+        - setWeight: 50
+        - pause:
+            duration: 60s
+        - analysis:
+            templates:
+              - templateName: backend-latency
+        - setWeight: 100

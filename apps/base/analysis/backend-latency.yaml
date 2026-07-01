@@ -8,12 +8,12 @@ spec:
       interval: 30s
       count: 3
       failureLimit: 1
-      successCondition: result[0] < 0.5
+      successCondition: result[0] < 200
       provider:
         prometheus:
           address: http://monitoring-kube-prometheus-prometheus.monitoring.svc:9090
           query: |
-            histogram_quantile(
+            1000 * histogram_quantile(
               0.95,
               sum(rate(http_request_duration_seconds_bucket{service="backend-canary"}[1m])) by (le)
             )

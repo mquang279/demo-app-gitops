@@ -16,6 +16,8 @@ spec:
         nginx:
           stableIngress: backend-ingress
       steps:
+        - setCanaryScale:
+            replicas: 4
         - setWeight: 20
         - pause:
             duration: 20s

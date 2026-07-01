@@ -5,3 +5,4 @@ namespace: argocd
 resources:
   - https://raw.githubusercontent.com/argoproj-labs/argocd-image-updater/v1.2.2/config/install.yaml
   - staging-image-updater.yaml
+  - prod-image-updater.yaml

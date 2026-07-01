@@ -1,0 +1,30 @@
+apiVersion: argocd-image-updater.argoproj.io/v1alpha1
+kind: ImageUpdater
+metadata:
+  name: demo-app-prod
+  namespace: argocd
+spec:
+  applicationRefs:
+    - namePattern: app-prod
+      writeBackConfig:
+        method: git:secret:argocd/image-updater-git-creds
+        gitConfig:
+          repository: https://github.com/mquang279/demo-app-gitops.git
+          branch: main
+      images:
+        - alias: backend
+          imageName: mquang279/demo-backend:latest
+          commonUpdateSettings:
+            updateStrategy: newest-build
+            allowTags: "regexp:^[0-9a-f]{7,12}$"
+          manifestTargets:
+            kustomize:
+              name: mquang279/demo-backend
+        - alias: frontend
+          imageName: mquang279/demo-frontend:latest
+          commonUpdateSettings:
+            updateStrategy: newest-build
+            allowTags: "regexp:^[0-9a-f]{7,12}$"
+          manifestTargets:
+            kustomize:
+              name: mquang279/demo-frontend

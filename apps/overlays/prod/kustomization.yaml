@@ -4,6 +4,7 @@ namespace: prod
 
 resources:
   - namespace.yaml
+  - ingress.yaml
   - ../../base
 
 patches:

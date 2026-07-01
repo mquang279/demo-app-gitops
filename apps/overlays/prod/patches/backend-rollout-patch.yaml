@@ -7,11 +7,8 @@ metadata:
   name: backend
 spec:
   replicas: 4
-  selector:
-    matchLabels:
-      app: backend
-      component: api
   strategy:
+    blueGreen: null
     canary:
       stableService: backend-stable
       canaryService: backend-canary
